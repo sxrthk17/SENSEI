@@ -1,0 +1,6 @@
+.env
+.venv/
+chroma_db/
+sensei_memory.db
+__pycache__/
+*.pyc
