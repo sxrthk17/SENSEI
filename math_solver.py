@@ -566,3 +566,229 @@ def series_expansion(
             "series",
             str(error)
         )
+
+
+
+
+# ============================================================
+# LAYER 4 — LINEAR ALGEBRA
+# ============================================================
+
+import numpy as np
+
+
+# ------------------------------------------------------------
+# VECTORS
+# ------------------------------------------------------------
+
+def create_vector(values):
+    try:
+        vector = np.array(values, dtype=float)
+        return _success("create_vector", vector)
+    except Exception as error:
+        return _failure("create_vector", str(error))
+
+
+def vector_add(vector_a, vector_b):
+    try:
+        a = np.array(vector_a, dtype=float)
+        b = np.array(vector_b, dtype=float)
+
+        if a.shape != b.shape:
+            raise ValueError("Vectors must have the same dimensions.")
+
+        result = a + b
+        return _success("vector_add", result)
+    except Exception as error:
+        return _failure("vector_add", str(error))
+
+
+def vector_subtract(vector_a, vector_b):
+    try:
+        a = np.array(vector_a, dtype=float)
+        b = np.array(vector_b, dtype=float)
+
+        if a.shape != b.shape:
+            raise ValueError("Vectors must have the same dimensions.")
+
+        result = a - b
+        return _success("vector_subtract", result)
+    except Exception as error:
+        return _failure("vector_subtract", str(error))
+
+
+def scalar_multiply_vector(scalar, vector):
+    try:
+        vector = np.array(vector, dtype=float)
+        result = scalar * vector
+        return _success("scalar_multiply_vector", result)
+    except Exception as error:
+        return _failure("scalar_multiply_vector", str(error))
+
+
+def dot_product(vector_a, vector_b):
+    try:
+        a = np.array(vector_a, dtype=float)
+        b = np.array(vector_b, dtype=float)
+
+        if a.shape != b.shape:
+            raise ValueError("Vectors must have the same dimensions.")
+
+        result = np.dot(a, b)
+        return _success("dot_product", result)
+    except Exception as error:
+        return _failure("dot_product", str(error))
+
+
+def vector_norm(vector):
+    try:
+        vector = np.array(vector, dtype=float)
+        result = np.linalg.norm(vector)
+        return _success("vector_norm", result)
+    except Exception as error:
+        return _failure("vector_norm", str(error))
+
+
+# ------------------------------------------------------------
+# MATRICES
+# ------------------------------------------------------------
+
+def create_matrix(values):
+    try:
+        matrix = np.array(values, dtype=float)
+
+        if matrix.ndim != 2:
+            raise ValueError("Matrix must be two-dimensional.")
+
+        return _success("create_matrix", matrix)
+    except Exception as error:
+        return _failure("create_matrix", str(error))
+
+
+def matrix_add(matrix_a, matrix_b):
+    try:
+        a = np.array(matrix_a, dtype=float)
+        b = np.array(matrix_b, dtype=float)
+
+        if a.shape != b.shape:
+            raise ValueError("Matrices must have the same dimensions.")
+
+        result = a + b
+        return _success("matrix_add", result)
+    except Exception as error:
+        return _failure("matrix_add", str(error))
+
+
+def matrix_multiply(matrix_a, matrix_b):
+    try:
+        a = np.array(matrix_a, dtype=float)
+        b = np.array(matrix_b, dtype=float)
+
+        if a.shape[1] != b.shape[0]:
+            raise ValueError(
+                "Number of columns in the first matrix must "
+                "equal the number of rows in the second matrix."
+            )
+
+        result = np.matmul(a, b)
+        return _success("matrix_multiply", result)
+    except Exception as error:
+        return _failure("matrix_multiply", str(error))
+
+
+def matrix_transpose(matrix):
+    try:
+        matrix = np.array(matrix, dtype=float)
+        result = matrix.T
+        return _success("matrix_transpose", result)
+    except Exception as error:
+        return _failure("matrix_transpose", str(error))
+
+
+# ------------------------------------------------------------
+# MATRIX PROPERTIES
+# ------------------------------------------------------------
+
+def matrix_determinant(matrix):
+    try:
+        matrix = np.array(matrix, dtype=float)
+
+        if matrix.ndim != 2:
+            raise ValueError("Matrix must be two-dimensional.")
+
+        if matrix.shape[0] != matrix.shape[1]:
+            raise ValueError("Determinant requires a square matrix.")
+
+        result = np.linalg.det(matrix)
+        return _success("matrix_determinant", result)
+    except Exception as error:
+        return _failure("matrix_determinant", str(error))
+
+
+def matrix_inverse(matrix):
+    try:
+        matrix = np.array(matrix, dtype=float)
+
+        if matrix.ndim != 2:
+            raise ValueError("Matrix must be two-dimensional.")
+
+        if matrix.shape[0] != matrix.shape[1]:
+            raise ValueError("Inverse requires a square matrix.")
+
+        if np.isclose(np.linalg.det(matrix), 0):
+            raise ValueError("Matrix is singular and cannot be inverted.")
+
+        result = np.linalg.inv(matrix)
+        return _success("matrix_inverse", result)
+    except Exception as error:
+        return _failure("matrix_inverse", str(error))
+
+
+def matrix_rank(matrix):
+    try:
+        matrix = np.array(matrix, dtype=float)
+        result = np.linalg.matrix_rank(matrix)
+        return _success("matrix_rank", result)
+    except Exception as error:
+        return _failure("matrix_rank", str(error))
+
+# ------------------------------------------------------------
+# EIGENVALUES AND EIGENVECTORS
+# ------------------------------------------------------------
+
+def matrix_eigenvalues(matrix):
+    try:
+        matrix = np.array(matrix, dtype=float)
+
+        if matrix.ndim != 2:
+            raise ValueError("Matrix must be two-dimensional.")
+
+        if matrix.shape[0] != matrix.shape[1]:
+            raise ValueError("Eigenvalues require a square matrix.")
+
+        result = np.linalg.eigvals(matrix)
+        return _success("matrix_eigenvalues", result)
+    except Exception as error:
+        return _failure("matrix_eigenvalues", str(error))
+
+
+def matrix_eigenvectors(matrix):
+    try:
+        matrix = np.array(matrix, dtype=float)
+
+        if matrix.ndim != 2:
+            raise ValueError("Matrix must be two-dimensional.")
+
+        if matrix.shape[0] != matrix.shape[1]:
+            raise ValueError("Eigenvectors require a square matrix.")
+
+        eigenvalues, eigenvectors = np.linalg.eig(matrix)
+
+        result = {
+            "eigenvalues": eigenvalues,
+            "eigenvectors": eigenvectors,
+        }
+
+        return _success("matrix_eigenvectors", result)
+    except Exception as error:
+        return _failure("matrix_eigenvectors", str(error))
