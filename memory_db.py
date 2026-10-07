@@ -86,19 +86,3 @@ def get_total_questions_asked():
 
 
 
-if __name__ == "__main__":
-    init_db()
-
-    log_interaction(
-        "What is SocialPulse AI?",
-        "SocialPulse AI turns fragmented public social data into structured, explainable intelligence.",
-        "sample_notes.pdf"
-    )
-
-    history = get_all_history()
-
-    print("\nStudy History:")
-    for row in history:
-        print(row)
-
-    print("\nTotal questions:", get_total_questions_asked())
