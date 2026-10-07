@@ -302,3 +302,267 @@ def solve_system(equations):
             "solve_system",
             str(error)
         )
+
+# ============================================================
+# LAYER 3 — CALCULUS
+# ============================================================
+
+
+def _get_symbol(variable):
+    """
+    Convert a variable name into a SymPy Symbol.
+    """
+
+    variable = variable.strip()
+
+    if not variable:
+        raise ValueError(
+            "Variable cannot be empty."
+        )
+
+    return sp.Symbol(variable)
+
+
+def differentiate(expression, variable="x", order=1):
+    """
+    Differentiate an expression.
+
+    Parameters
+    ----------
+    expression : str
+        Mathematical expression.
+    variable : str
+        Variable with respect to which differentiation is performed.
+    order : int
+        Order of differentiation.
+
+    Examples
+    --------
+    differentiate("x^3")
+    differentiate("x^2*y + y^3", "x")
+    differentiate("x^4", "x", 2)
+    """
+
+    try:
+        if not isinstance(order, int) or order < 1:
+            raise ValueError(
+                "Differentiation order must be a positive integer."
+            )
+
+        expr = _parse_expression(expression)
+        symbol = _get_symbol(variable)
+
+        result = sp.diff(
+            expr,
+            symbol,
+            order
+        )
+
+        return _success(
+            "differentiate",
+            result
+        )
+
+    except Exception as error:
+        return _failure(
+            "differentiate",
+            str(error)
+        )
+
+
+def integrate(expression, variable="x"):
+    """
+    Calculate an indefinite integral.
+
+    Example:
+        integrate("x^2")
+        -> x^3/3
+    """
+
+    try:
+        expr = _parse_expression(expression)
+        symbol = _get_symbol(variable)
+
+        result = sp.integrate(
+            expr,
+            symbol
+        )
+
+        return _success(
+            "integrate",
+            result
+        )
+
+    except Exception as error:
+        return _failure(
+            "integrate",
+            str(error)
+        )
+
+
+def definite_integral(
+    expression,
+    variable="x",
+    lower=None,
+    upper=None
+):
+    """
+    Calculate a definite integral.
+
+    Example:
+        ∫(x^2) dx from 0 to 1
+        -> 1/3
+    """
+
+    try:
+        if lower is None or upper is None:
+            raise ValueError(
+                "Both lower and upper limits are required."
+            )
+
+        expr = _parse_expression(expression)
+        symbol = _get_symbol(variable)
+
+        lower_bound = sp.sympify(
+            str(lower).replace("^", "**")
+        )
+
+        upper_bound = sp.sympify(
+            str(upper).replace("^", "**")
+        )
+
+        result = sp.integrate(
+            expr,
+            (symbol, lower_bound, upper_bound)
+        )
+
+        return _success(
+            "definite_integral",
+            result
+        )
+
+    except Exception as error:
+        return _failure(
+            "definite_integral",
+            str(error)
+        )
+
+
+def calculate_limit(
+    expression,
+    variable="x",
+    point=0,
+    direction="both"
+):
+    """
+    Calculate a mathematical limit.
+
+    Examples:
+        lim x->0 sin(x)/x
+        lim x->oo 1/x
+    """
+
+    try:
+        expr = _parse_expression(expression)
+        symbol = _get_symbol(variable)
+
+        if isinstance(point, str):
+            point_value = point.strip().lower()
+
+            if point_value in ("oo", "inf", "infinity"):
+                point = sp.oo
+
+            elif point_value in (
+                "-oo",
+                "-inf",
+                "-infinity"
+            ):
+                point = -sp.oo
+
+            else:
+                point = sp.sympify(
+                    point.replace("^", "**")
+                )
+
+        else:
+            point = sp.sympify(point)
+
+        if direction not in (
+            "both",
+            "+",
+            "-"
+        ):
+            raise ValueError(
+                "Direction must be 'both', '+' or '-'."
+            )
+
+        if direction == "both":
+            result = sp.limit(
+                expr,
+                symbol,
+                point
+            )
+
+        else:
+            result = sp.limit(
+                expr,
+                symbol,
+                point,
+                dir=direction
+            )
+
+        return _success(
+            "limit",
+            result
+        )
+
+    except Exception as error:
+        return _failure(
+            "limit",
+            str(error)
+        )
+
+
+def series_expansion(
+    expression,
+    variable="x",
+    point=0,
+    order=6
+):
+    """
+    Generate a Taylor/Maclaurin series expansion.
+
+    Example:
+        series_expansion("sin(x)")
+    """
+
+    try:
+        if not isinstance(order, int) or order < 1:
+            raise ValueError(
+                "Series order must be a positive integer."
+            )
+
+        expr = _parse_expression(expression)
+        symbol = _get_symbol(variable)
+
+        point_value = sp.sympify(
+            str(point).replace("^", "**")
+        )
+
+        result = sp.series(
+            expr,
+            symbol,
+            point_value,
+            order
+        )
+
+        return _success(
+            "series",
+            result
+        )
+
+    except Exception as error:
+        return _failure(
+            "series",
+            str(error)
+        )
