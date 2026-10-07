@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <linearGradient id="coatGrad4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+    <radialGradient id="halo4" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#8B5CF6" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#6D28D9" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow4" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow4)">
+    <!-- Base Shadow -->
+    <ellipse cx="200" cy="365" rx="70" ry="12" fill="#000000" opacity="0.15"/>
+
+    <!-- Geometric Knowledge Halo / Aura -->
+    <circle cx="200" cy="180" r="110" fill="url(#halo4)"/>
+    <circle cx="200" cy="180" r="95" fill="none" stroke="#A78BFA" stroke-width="1.5" stroke-dasharray="6,6" opacity="0.6"/>
+    <polygon points="200,80 210,95 190,95" fill="#C4B5FD" opacity="0.8"/>
+    <polygon points="200,280 210,265 190,265" fill="#C4B5FD" opacity="0.8"/>
+
+    <!-- Hair Back (Neat, Elegant) -->
+    <path d="M130 140 C125 75 160 50 200 50 C240 50 275 75 270 140 Z" fill="#1E1B4B"/>
+
+    <!-- Head & Ears -->
+    <path d="M148 140 C148 210 252 210 252 140 Z" fill="#FFDFC4"/>
+    <circle cx="145" cy="150" r="9" fill="#FFDFC4"/>
+    <circle cx="255" cy="150" r="9" fill="#FFDFC4"/>
+
+    <!-- Refined Hair Front -->
+    <path d="M142 120 Q170 75 200 95 Q220 70 240 85 Q255 75 260 105 Q245 110 230 100 Q205 115 180 105 Q160 120 142 120 Z" fill="#312E81"/>
+
+    <!-- Glasses (Intellectual/Scholar motif) -->
+    <rect x="155" y="142" width="36" height="24" rx="5" fill="none" stroke="#DDD6FE" stroke-width="2.5"/>
+    <rect x="209" y="142" width="36" height="24" rx="5" fill="none" stroke="#DDD6FE" stroke-width="2.5"/>
+    <line x1="191" y1="152" x2="209" y2="152" stroke="#DDD6FE" stroke-width="2.5"/>
+
+    <!-- Calm, Intelligent Eyes -->
+    <ellipse cx="173" cy="154" rx="7" ry="10" fill="#1E1B4B"/>
+    <ellipse cx="227" cy="154" rx="7" ry="10" fill="#1E1B4B"/>
+    <circle cx="171" cy="151" r="2.5" fill="#FFFFFF"/>
+    <circle cx="225" cy="151" r="2.5" fill="#FFFFFF"/>
+
+    <!-- Composition & Calm Expression -->
+    <path d="M162 135 L182 138" stroke="#1E1B4B" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M238 135 L218 138" stroke="#1E1B4B" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M193 180 Q200 184 207 180" stroke="#1E1B4B" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+    <!-- Scholar Trench / Academic Coat -->
+    <path d="M135 200 L265 200 L280 320 L120 320 Z" fill="url(#coatGrad4)"/>
+
+    <!-- High Collar & Gold/Purple Trim -->
+    <path d="M165 200 L200 235 L235 200" fill="#4C1D95"/>
+    <path d="M165 200 L200 235 L235 200" stroke="#F59E0B" stroke-width="2" fill="none"/>
+
+    <!-- Floating Scroll / Data Tablet (Pondering Pose) -->
+    <!-- Left Hand chin-touch -->
+    <path d="M140 210 L120 250 Q125 270 150 260 L160 220 Z" fill="url(#coatGrad4)"/>
+    <circle cx="175" cy="188" r="7" fill="#FFDFC4"/> <!-- Hand touching chin -->
+
+    <!-- Right Hand Holding Floating Scroll/Data -->
+    <path d="M260 210 L280 250 Q275 270 250 260 L240 220 Z" fill="url(#coatGrad4)"/>
+    <circle cx="280" cy="245" r="7" fill="#FFDFC4"/>
+
+    <!-- Floating Scroll Asset -->
+    <rect x="260" y="210" width="55" height="75" rx="5" fill="#1E0E62" stroke="#8B5CF6" stroke-width="2" transform="rotate(12 260 210)"/>
+    <line x1="270" y1="225" x2="300" y2="220" stroke="#C4B5FD" stroke-width="2" stroke-linecap="round" transform="rotate(12 260 210)"/>
+    <line x1="270" y1="238" x2="295" y2="233" stroke="#C4B5FD" stroke-width="2" stroke-linecap="round" transform="rotate(12 260 210)"/>
+    <line x1="270" y1="251" x2="305" y2="246" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round" transform="rotate(12 260 210)"/>
+
+    <!-- Trousers & Shoes -->
+    <path d="M150 320 L145 350 L180 350 L185 320 Z" fill="#0F172A"/>
+    <path d="M250 320 L255 350 L220 350 L215 320 Z" fill="#0F172A"/>
+
+    <!-- Formal Shoes -->
+    <rect x="135" y="348" width="48" height="18" rx="4" fill="#68D391"/>
+    <rect x="135" y="348" width="48" height="18" rx="4" fill="#4C1D95"/>
+    <rect x="217" y="348" width="48" height="18" rx="4" fill="#4C1D95"/>
+  </g>
+</svg>

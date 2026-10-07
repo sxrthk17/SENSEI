@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <!-- Gradients & Glows -->
+    <radialGradient id="sparkGlow1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFD700" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#FF8C00" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="jacketGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E2E8F0"/>
+    </linearGradient>
+    <linearGradient id="accentGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <filter id="shadow1" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow1)">
+    <!-- Base Shadow -->
+    <ellipse cx="200" cy="365" rx="75" ry="12" fill="#000000" opacity="0.15"/>
+
+    <!-- Sparkle Effect (Curiosity Element) -->
+    <circle cx="295" cy="145" r="28" fill="url(#sparkGlow1)"/>
+    <path d="M295 125 L298 142 L315 145 L298 148 L295 165 L292 148 L275 145 L292 142 Z" fill="#FFD700"/>
+
+    <!-- Hair Back -->
+    <path d="M125 155 C110 110 145 70 200 70 C255 70 290 110 275 155 Z" fill="#2D3748"/>
+    <path d="M115 170 Q95 150 110 120 Q130 110 135 135 Z" fill="#2D3748"/>
+    <path d="M285 170 Q305 150 290 120 Q270 110 265 135 Z" fill="#2D3748"/>
+
+    <!-- Head & Ears -->
+    <path d="M140 160 C140 230 260 230 260 160 Z" fill="#FFDFC4"/>
+    <circle cx="138" cy="170" r="14" fill="#FFDFC4"/>
+    <circle cx="262" cy="170" r="14" fill="#FFDFC4"/>
+
+    <!-- Spiky Hair Front -->
+    <path d="M130 140 Q150 80 180 100 Q195 70 215 95 Q235 75 255 110 Q270 125 265 145 Q245 130 235 140 Q210 115 190 135 Q165 120 130 140 Z" fill="#1A202C"/>
+
+    <!-- Headband with "学" (Learn) -->
+    <path d="M135 140 Q200 130 265 140 L268 160 Q200 150 132 160 Z" fill="#1E293B"/>
+    <text x="200" y="153" fill="#FFFFFF" font-family="'Courier New', monospace" font-weight="bold" font-size="14" text-anchor="middle">学</text>
+
+    <!-- Face Details -->
+    <!-- Large Curious Eyes -->
+    <ellipse cx="170" cy="180" rx="14" ry="18" fill="#1A202C"/>
+    <ellipse cx="230" cy="180" rx="14" ry="18" fill="#1A202C"/>
+    <circle cx="166" cy="175" r="5" fill="#FFFFFF"/>
+    <circle cx="226" cy="175" r="5" fill="#FFFFFF"/>
+    <circle cx="173" cy="186" r="2" fill="#FFFFFF"/>
+    <circle cx="233" cy="186" r="2" fill="#FFFFFF"/>
+
+    <!-- Eyebrows & Cheeks -->
+    <path d="M158 158 Q170 152 180 158" stroke="#1A202C" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <path d="M220 158 Q230 152 242 158" stroke="#1A202C" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <ellipse cx="160" cy="195" rx="8" ry="5" fill="#FF8A8A" opacity="0.5"/>
+    <ellipse cx="240" cy="195" rx="8" ry="5" fill="#FF8A8A" opacity="0.5"/>
+    <path d="M180 178 L188 184" stroke="#D97706" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- Mouth -->
+    <path d="M192 196 Q200 206 208 196" stroke="#1A202C" stroke-width="3" stroke-linecap="round" fill="none"/>
+
+    <!-- Outfit (Over-sized Apprentice Hoodie) -->
+    <path d="M140 230 Q200 220 260 230 L280 320 Q200 330 120 320 Z" fill="url(#jacketGrad1)"/>
+
+    <!-- Hoodie Details -->
+    <path d="M175 228 L200 265 L225 228" fill="#2563EB"/>
+    <path d="M195 265 L195 300" stroke="#94A3B8" stroke-width="3" stroke-linecap="round"/>
+    <path d="M205 265 L205 295" stroke="#94A3B8" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Sleeves / Arms -->
+    <path d="M140 230 L105 280 C95 295 115 310 125 295 L145 260 Z" fill="url(#jacketGrad1)"/>
+    <path d="M260 230 L290 265 Q300 280 285 290 L255 260 Z" fill="url(#jacketGrad1)"/>
+
+    <!-- Hands -->
+    <circle cx="112" cy="292" r="10" fill="#FFDFC4"/>
+    <circle cx="282" cy="275" r="10" fill="#FFDFC4"/>
+
+    <!-- Notebook Asset (Carried under arm) -->
+    <rect x="115" y="250" width="35" height="48" rx="4" fill="#1E293B" transform="rotate(-15 115 250)"/>
+    <rect x="112" y="252" width="6" height="44" rx="2" fill="#3B82F6" transform="rotate(-15 115 250)"/>
+    <path d="M130 268 L142 265 M128 276 L140 273" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" transform="rotate(-15 115 250)"/>
+
+    <!-- Pants & Shoes -->
+    <path d="M145 315 L140 345 L175 345 L185 315 Z" fill="#1E293B"/>
+    <path d="M255 315 L260 345 L225 345 L215 315 Z" fill="#1E293B"/>
+
+    <!-- Chibi Sneakers -->
+    <rect x="130" y="340" width="48" height="22" rx="10" fill="#3B82F6"/>
+    <path d="M130 352 L178 352" stroke="#FFFFFF" stroke-width="4"/>
+    <rect x="222" y="340" width="48" height="22" rx="10" fill="#3B82F6"/>
+    <path d="M222 352 L270 352" stroke="#FFFFFF" stroke-width="4"/>
+  </g>
+</svg>

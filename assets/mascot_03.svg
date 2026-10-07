@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <linearGradient id="techVest3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B"/>
+      <stop offset="100%" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="cyanGlow3" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#22D3EE"/>
+    </linearGradient>
+    <filter id="shadow3" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow3)">
+    <!-- Shadow -->
+    <ellipse cx="200" cy="365" rx="75" ry="12" fill="#000000" opacity="0.15"/>
+
+    <!-- Floating HUD Elements (Engineering/Data) -->
+    <path d="M90 180 L110 180 M100 170 L100 190" stroke="#06B6D4" stroke-width="2" opacity="0.6"/>
+    <rect x="280" y="160" width="30" height="20" rx="3" fill="none" stroke="#06B6D4" stroke-width="1.5" opacity="0.5"/>
+    <line x1="285" y1="170" x2="300" y2="170" stroke="#06B6D4" stroke-width="2" opacity="0.7"/>
+
+    <!-- Hair Back -->
+    <path d="M130 140 C120 80 160 50 200 50 C240 50 280 80 270 140 Z" fill="#0F172A"/>
+
+    <!-- Head (Young Adult proportions, sharper jaw) -->
+    <path d="M145 145 C145 215 255 215 255 145 Z" fill="#FFDFC4"/>
+    <circle cx="142" cy="155" r="10" fill="#FFDFC4"/>
+    <circle cx="258" cy="155" r="10" fill="#FFDFC4"/>
+
+    <!-- Hair Front (Cropped/Engineered look) -->
+    <path d="M140 120 Q165 70 195 90 Q210 60 230 80 Q250 60 260 100 Q265 125 255 135 Q235 115 215 125 Q190 100 165 115 Q150 110 140 120 Z" fill="#1E293B"/>
+
+    <!-- Single Smart Monocle/AR Eyepiece -->
+    <circle cx="225" cy="160" r="14" fill="none" stroke="#06B6D4" stroke-width="2.5"/>
+    <circle cx="225" cy="160" r="6" fill="#06B6D4" opacity="0.3"/>
+    <line x1="239" y1="160" x2="255" y2="155" stroke="#06B6D4" stroke-width="2"/>
+
+    <!-- Face Details -->
+    <ellipse cx="175" cy="160" rx="10" ry="14" fill="#0F172A"/>
+    <circle cx="172" cy="156" r="3" fill="#FFFFFF"/>
+    <!-- Serious/Focused Eyebrows -->
+    <path d="M162 142 L185 148" stroke="#0F172A" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M238 142 L215 148" stroke="#0F172A" stroke-width="3.5" stroke-linecap="round"/>
+    <!-- Smirk -->
+    <path d="M190 182 Q200 186 210 180" stroke="#0F172A" stroke-width="3" stroke-linecap="round" fill="none"/>
+
+    <!-- Tactical Utility Vest + Inner Hoodie -->
+    <path d="M135 210 L265 210 L275 315 L125 315 Z" fill="#F8FAFC"/>
+    <path d="M145 210 L255 210 L265 315 L135 315 Z" fill="url(#techVest3)"/>
+
+    <!-- Vest Details & Cyan Accent Lines -->
+    <rect x="155" y="235" width="30" height="35" rx="4" fill="#334155"/>
+    <rect x="215" y="235" width="30" height="35" rx="4" fill="#334155"/>
+    <line x1="200" y1="210" x2="200" y2="315" stroke="url(#cyanGlow3)" stroke-width="3"/>
+
+    <!-- Interactive Holographic Blueprint Projection from Hand -->
+    <!-- Right Arm Extended -->
+    <path d="M255 220 L295 240 Q305 250 295 265 L265 255 Z" fill="url(#techVest3)"/>
+    <circle cx="295" cy="258" r="7" fill="#FFDFC4"/>
+
+    <!-- Floating Hologram Console -->
+    <polygon points="280,220 350,200 340,260 270,280" fill="#06B6D4" opacity="0.25" stroke="#22D3EE" stroke-width="1.5"/>
+    <line x1="290" y1="225" x2="330" y2="245" stroke="#FFFFFF" stroke-width="2" opacity="0.8"/>
+    <circle cx="310" cy="235" r="3" fill="#FFFFFF"/>
+
+    <!-- Left Arm Arm-folded pose -->
+    <path d="M145 220 L115 250 Q110 265 130 270 L165 250 Z" fill="url(#techVest3)"/>
+    <circle cx="150" cy="260" r="7" fill="#FFDFC4"/>
+
+    <!-- Cargo Pants -->
+    <path d="M145 315 L140 348 L175 348 L185 315 Z" fill="#1E293B"/>
+    <path d="M255 315 L260 348 L225 348 L215 315 Z" fill="#1E293B"/>
+    <rect x="135" y="325" width="12" height="18" rx="2" fill="#334155"/>
+    <rect x="253" y="325" width="12" height="18" rx="2" fill="#334155"/>
+
+    <!-- Boots -->
+    <rect x="132" y="345" width="46" height="22" rx="5" fill="#06B6D4"/>
+    <rect x="222" y="345" width="46" height="22" rx="5" fill="#06B6D4"/>
+  </g>
+</svg>

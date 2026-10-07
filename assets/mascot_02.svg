@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <linearGradient id="jacketGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#CBD5E1"/>
+    </linearGradient>
+    <linearGradient id="screenGlow2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#0284C7"/>
+    </linearGradient>
+    <filter id="shadow2" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow2)">
+    <!-- Base Shadow -->
+    <ellipse cx="200" cy="365" rx="70" ry="12" fill="#000000" opacity="0.15"/>
+
+    <!-- Hair Back -->
+    <path d="M120 150 C110 90 150 60 200 60 C250 60 290 90 280 150 Z" fill="#1E293B"/>
+
+    <!-- Head & Ears -->
+    <path d="M142 150 C142 220 258 220 258 150 Z" fill="#FDE047" opacity="0.1"/>
+    <path d="M142 150 C142 220 258 220 258 150 Z" fill="#FFDFC4"/>
+    <circle cx="140" cy="165" r="12" fill="#FFDFC4"/>
+    <circle cx="260" cy="165" r="12" fill="#FFDFC4"/>
+
+    <!-- Sharper Hair Front (Teenager/Student) -->
+    <path d="M135 130 Q160 70 190 95 Q205 60 230 85 Q250 65 265 100 Q275 120 260 145 Q240 120 220 135 Q195 105 170 125 Q150 110 135 130 Z" fill="#0F172A"/>
+
+    <!-- Headband -->
+    <path d="M138 135 Q200 125 262 135 L265 152 Q200 142 135 152 Z" fill="#0284C7"/>
+    <text x="200" y="147" fill="#FFFFFF" font-family="'Courier New', monospace" font-weight="bold" font-size="13" text-anchor="middle">SENSEI</text>
+
+    <!-- Face Details -->
+    <!-- Focused Eyes -->
+    <ellipse cx="172" cy="172" rx="12" ry="16" fill="#0F172A"/>
+    <ellipse cx="228" cy="172" rx="12" ry="16" fill="#0F172A"/>
+    <circle cx="169" cy="168" r="4" fill="#FFFFFF"/>
+    <circle cx="225" cy="168" r="4" fill="#FFFFFF"/>
+    <circle cx="174" cy="176" r="2" fill="#38BDF8"/>
+    <circle cx="230" cy="176" r="2" fill="#38BDF8"/>
+
+    <!-- Eyebrows (Determined) -->
+    <path d="M158 152 L180 156" stroke="#0F172A" stroke-width="3" stroke-linecap="round"/>
+    <path d="M242 152 L220 156" stroke="#0F172A" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Small Confident Smile -->
+    <path d="M192 190 Q200 196 208 190" stroke="#0F172A" stroke-width="3" stroke-linecap="round" fill="none"/>
+
+    <!-- Uniform Track Jacket -->
+    <path d="M142 220 Q200 212 258 220 L270 318 Q200 325 130 318 Z" fill="url(#jacketGrad2)"/>
+    <!-- Blue Collar & Stripe -->
+    <path d="M170 217 L200 250 L230 217" fill="#0284C7"/>
+    <path d="M135 260 L265 260" stroke="#0284C7" stroke-width="6"/>
+
+    <!-- Arms & Interaction with Tablet -->
+    <!-- Left Arm holding Tablet -->
+    <path d="M142 220 L120 265 Q115 285 135 285 L160 270 Z" fill="url(#jacketGrad2)"/>
+    <!-- Right Arm holding Stylus -->
+    <path d="M258 220 L275 260 Q280 275 260 280 L235 265 Z" fill="url(#jacketGrad2)"/>
+
+    <!-- Hands -->
+    <circle cx="145" cy="275" r="9" fill="#FFDFC4"/>
+    <circle cx="248" cy="270" r="9" fill="#FFDFC4"/>
+
+    <!-- Digital Tablet -->
+    <rect x="145" y="240" width="90" height="60" rx="6" fill="#1E293B" transform="rotate(-5 190 270)"/>
+    <rect x="150" y="245" width="80" height="50" rx="3" fill="url(#screenGlow2)" transform="rotate(-5 190 270)"/>
+    <!-- Stylus -->
+    <line x1="245" y1="260" x2="225" y2="265" stroke="#F8FAFC" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Slim Fit Pants -->
+    <path d="M150 315 L148 348 L178 348 L185 315 Z" fill="#334155"/>
+    <path d="M250 315 L252 348 L222 348 L215 315 Z" fill="#334155"/>
+
+    <!-- Modern High-top Sneakers -->
+    <rect x="136" y="344" width="46" height="22" rx="6" fill="#0284C7"/>
+    <path d="M136 358 L182 358" stroke="#FFFFFF" stroke-width="3"/>
+    <rect x="218" y="344" width="46" height="22" rx="6" fill="#0284C7"/>
+    <path d="M218 358 L264 358" stroke="#FFFFFF" stroke-width="3"/>
+  </g>
+</svg>

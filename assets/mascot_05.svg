@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <linearGradient id="robeGrad5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="50%" stop-color="#1E1B4B"/>
+      <stop offset="100%" stop-color="#311B92"/>
+    </linearGradient>
+    <radialGradient id="masterAura5" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#E0E7FF" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#6366F1" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#4338CA" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow5" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow5)">
+    <!-- Base Shadow -->
+    <ellipse cx="200" cy="365" rx="80" ry="14" fill="#000000" opacity="0.2"/>
+
+    <!-- Master Controlled Aura Field -->
+    <circle cx="200" cy="190" r="130" fill="url(#masterAura5)"/>
+    <circle cx="200" cy="190" r="115" fill="none" stroke="#818CF8" stroke-width="2" opacity="0.5"/>
+
+    <!-- Floating Code / Data Runes -->
+    <text x="75" y="190" fill="#A5B4FC" font-family="monospace" font-size="12" opacity="0.7">&lt;/&gt;</text>
+    <text x="310" y="190" fill="#A5B4FC" font-family="monospace" font-size="12" opacity="0.7">∫dx</text>
+    <text x="200" y="55" fill="#A5B4FC" font-family="monospace" font-size="12" text-anchor="middle" opacity="0.7">λ.x</text>
+
+    <!-- Hair Back (Longer, Composed) -->
+    <path d="M120 140 C110 60 150 40 200 40 C250 40 290 60 280 140 Z" fill="#020617"/>
+
+    <!-- Head -->
+    <path d="M148 135 C148 205 252 205 252 135 Z" fill="#FFDFC4"/>
+
+    <!-- Hair Front (Master Spikes/Sleek) -->
+    <path d="M135 115 Q165 55 195 80 Q210 45 235 70 Q255 50 265 90 Q275 115 255 125 Q235 100 215 110 Q190 85 165 100 Q145 100 135 115 Z" fill="#0F172A"/>
+
+    <!-- Face Details (Calm, Undaunted Eyes) -->
+    <ellipse cx="173" cy="150" rx="9" ry="12" fill="#020617"/>
+    <ellipse cx="227" cy="150" rx="9" ry="12" fill="#020617"/>
+    <circle cx="171" cy="147" r="3" fill="#FFFFFF"/>
+    <circle cx="225" cy="147" r="3" fill="#FFFFFF"/>
+    <circle cx="174" cy="152" r="1.5" fill="#818CF8"/>
+    <circle cx="228" cy="152" r="1.5" fill="#818CF8"/>
+
+    <!-- Eyebrows (Calm, Flat) -->
+    <line x1="162" y1="135" x2="184" y2="137" stroke="#020617" stroke-width="3" stroke-linecap="round"/>
+    <line x1="238" y1="135" x2="216" y2="137" stroke="#020617" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Subtle Knowing Smile -->
+    <path d="M192 175 Q200 180 208 175" stroke="#020617" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+    <!-- Modern Tech-Kimono / Refined Robes -->
+    <path d="M125 190 L275 190 L290 330 L110 330 Z" fill="url(#robeGrad5)"/>
+
+    <!-- Cross Sash / Stole with "学" & "勝" (Mastery / Victory) -->
+    <path d="M150 190 L200 260 L220 260 L170 190 Z" fill="#4338CA"/>
+    <path d="M250 190 L200 260 L180 260 L230 190 Z" fill="#3730A3"/>
+    <line x1="200" y1="260" x2="200" y2="330" stroke="#6366F1" stroke-width="4"/>
+
+    <!-- Wide Master Sleeves -->
+    <path d="M125 190 L80 250 Q75 280 100 280 L140 240 Z" fill="url(#robeGrad5)"/>
+    <path d="M275 190 L320 250 Q325 280 300 280 L260 240 Z" fill="url(#robeGrad5)"/>
+
+    <!-- Hands in Calm Centered Pose -->
+    <circle cx="188" cy="250" r="8" fill="#FFDFC4"/>
+    <circle cx="212" cy="250" r="8" fill="#FFDFC4"/>
+
+    <!-- Hakama Pants / Base Garment -->
+    <path d="M140 320 L135 352 L180 352 L185 320 Z" fill="#020617"/>
+    <path d="M260 320 L265 352 L220 352 L215 320 Z" fill="#020617"/>
+
+    <!-- Traditional/Modern Master Footwear -->
+    <rect x="125" y="350" width="55" height="16" rx="4" fill="#6366F1"/>
+    <rect x="220" y="350" width="55" height="16" rx="4" fill="#6366F1"/>
+  </g>
+</svg>
