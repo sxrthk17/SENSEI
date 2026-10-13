@@ -7,3 +7,9 @@ pypdf
 sentence-transformers
 python-dotenv
 sympy
+langchain-text-splitters
+langchain-huggingface
+langchain-chroma
+torch
+requests
+tavily-python

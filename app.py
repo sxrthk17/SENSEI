@@ -1,21 +1,45 @@
 
+import ast
+import html
+import random
 import streamlit as st
+import time
+from streamlit_autorefresh import st_autorefresh
 
 from aesthetics import (
     initialize_theme,
     apply_theme,
     display_quote,
+    display_mascot,
+    render_theme_selector,
 )
 
 from memory_db import (
     init_db,
+    init_learning_db,
     log_interaction,
+    get_all_history,
     get_total_questions_asked,
+    save_pomodoro_session,
+    get_pomodoro_stats,
+    get_recent_pomodoro_sessions,
+    add_todo_task,
+    get_todo_tasks,
+    set_todo_completed,
+    delete_todo_task,
 )
 
 
+from question_engine import (
+    extract_concepts,
+    generate_questions_for_concept,
+    grade_question,
+    calculate_quiz_score,
+    next_difficulty,
+)
+
 # ============================================================
-# Page Configuration
+# PAGE CONFIGURATION
 # ============================================================
 
 st.set_page_config(
@@ -26,57 +50,97 @@ st.set_page_config(
 
 
 # ============================================================
-# Initialize Sensei
+# INITIALIZE SENSEI
 # ============================================================
 
 theme = initialize_theme()
 apply_theme(theme)
 init_db()
-
+init_learning_db()
 
 # ============================================================
-# Sidebar
+# SIDEBAR
 # ============================================================
 
 with st.sidebar:
-
     st.markdown("## 🥋 SENSEI")
-    st.markdown("---")
+    st.caption("Your personal AI study workspace.")
+
+    if "sidebar_mascot_stage" not in st.session_state:
+        st.session_state.sidebar_mascot_stage = random.randint(1, 5)
+
+    display_mascot(stage=st.session_state.sidebar_mascot_stage)
+    st.divider()
 
     mode = st.radio(
-        "Choose your mode",
-        [
-            "📝 Notes Q&A",
-            "🧮 Math Solver",
-            "📚 Study History",
-        ],
-    )
+    "Choose your mode",
+    [
+        "📝 Notes Q&A",
+        "🧠 Adaptive Quiz",
+        "🧮 Math Solver",
+        "📚 Study History",
+        "🍅 Pomodoro Focus",
+        "✨ To-do List",
+    ],
+    key="sensei_navigation",
+)
 
-    st.markdown("---")
+    st.divider()
+    render_theme_selector()
+    st.divider()
 
     st.metric(
         "Questions Asked",
         get_total_questions_asked(),
     )
+    
+    st.divider()
 
-    st.markdown("---")
+    st.caption("Learn. Practice. Improve.")
 
-    st.caption(
-        "Your personal AI study assistant."
+
+# ============================================================
+# MAIN HEADER — SENSEI HERO
+# ============================================================
+
+hero_left, hero_right = st.columns([1.65, 1], gap="large")
+
+with hero_left:
+    st.markdown(
+        """
+        <div class="sensei-hero">
+            <div class="sensei-eyebrow">
+                YOUR PERSONAL AI LEARNING SPACE
+            </div>
+            <h1>Welcome to <span class="sensei-accent">SENSEI</span></h1>
+            <p class="sensei-subtitle">
+                Learn with focus. Practice with purpose.
+                Turn knowledge into mastery.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
+    st.markdown(
+        """
+        <div class="sensei-card">
+            <div class="sensei-eyebrow">YOUR DOJO</div>
+            <strong>One workspace. Three ways to grow.</strong>
+            <p class="sensei-muted">
+                Explore your notes, solve mathematical problems,
+                and revisit your learning journey.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-# ============================================================
-# Main Header
-# ============================================================
+with hero_right:
+    display_mascot(stage=6)
 
 st.markdown(
-    """
-    <div style="text-align: center;">
-        <h1 class="sensei-accent">🥋 SENSEI</h1>
-        <p>Your personal AI study assistant</p>
-    </div>
-    """,
+    '<hr class="sensei-divider">',
     unsafe_allow_html=True,
 )
 
@@ -85,320 +149,881 @@ st.markdown(
 # NOTES Q&A
 # ============================================================
 
+# ============================================================
+# NOTES Q&A — MULTI-PDF LIBRARY (SOURCE-FIRST)
+# Replace your existing NOTES Q&A section with this block.
+# ============================================================
+
 if mode == "📝 Notes Q&A":
 
-    st.markdown("## 📝 Notes Q&A")
+    import hashlib
+    import json
+    from pathlib import Path
 
+    import streamlit as st
+
+    from rag_pipeline import (
+        create_embeddings,
+        ingest_pdf,
+        generate_document_id,
+        load_existing_vector_store,
+        retrieve_documents,
+        generate_answer,
+        is_syllabus_query
+
+    )
+
+    st.markdown("## 📝 Notes Q&A")
     st.info(
-        "Upload your study notes and ask questions grounded in them."
+        "Upload multiple study PDFs, organize them by subject, "
+        "and choose exactly which notes Sensei should use."
     )
 
     display_quote()
 
+    # --------------------------------------------------------
+    # PERSISTENT LIBRARY
+    # --------------------------------------------------------
+
+    upload_dir = Path("uploaded_notes")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = upload_dir / "library.json"
+
+    if "sensei_library" not in st.session_state:
+        library = {}
+
+        if manifest_path.exists():
+            try:
+                loaded = json.loads(
+                    manifest_path.read_text(encoding="utf-8")
+                )
+                if isinstance(loaded, dict):
+                    library = loaded
+            except (json.JSONDecodeError, OSError):
+                st.warning(
+                    "The library manifest could not be read. "
+                    "Recovering entries from saved PDFs where possible."
+                )
+
+        # Recover PDFs saved by the earlier uploader.
+        # This does not delete or reset ChromaDB.
+        known_paths = {
+            str(Path(item["path"]).resolve())
+            for item in library.values()
+            if isinstance(item, dict) and item.get("path")
+        }
+
+        for pdf_path in upload_dir.glob("*.pdf"):
+            if str(pdf_path.resolve()) in known_paths:
+                continue
+
+            try:
+                document_id = generate_document_id(str(pdf_path))
+            except Exception:
+                continue
+
+            display_name = pdf_path.name
+
+            # Earlier uploads used:
+            # <12-character-hash>_<original-filename>.pdf
+            if (
+                len(display_name) > 13
+                and display_name[12] == "_"
+            ):
+                display_name = display_name[13:]
+
+            library.setdefault(
+                document_id,
+                {
+                    "document_id": document_id,
+                    "display_name": display_name,
+                    "path": str(pdf_path),
+                    "subject": "Uncategorized",
+                },
+            )
+
+        st.session_state.sensei_library = library
+
+        manifest_path.write_text(
+            json.dumps(library, indent=2),
+            encoding="utf-8",
+        )
+
+    library = st.session_state.sensei_library
 
     # --------------------------------------------------------
-    # PDF Upload
+    # UPLOAD AND PROCESS MULTIPLE PDFs
     # --------------------------------------------------------
 
-    uploaded_file = st.file_uploader(
-        "Upload your study notes",
-        type=["pdf"],
+    st.markdown("### 📥 Add study notes")
+
+    subject_name = st.text_input(
+        "Subject / course for these PDFs",
+        value="Uncategorized",
+        placeholder="e.g. Applications of AI",
+        key="upload_subject_name",
     )
 
+    uploaded_files = st.file_uploader(
+        "Choose one or more PDF files",
+        type=["pdf"],
+        accept_multiple_files=True,
+        key="notes_pdf_uploader",
+    )
 
-    # --------------------------------------------------------
-    # Process Notes
-    # --------------------------------------------------------
-
-    if uploaded_file is not None:
-
-        st.success(
-            f"📄 Uploaded: {uploaded_file.name}"
+    if uploaded_files:
+        st.caption(
+            f"{len(uploaded_files)} PDF file(s) selected."
         )
 
-        if st.button("🧠 Process Notes"):
+    if st.button(
+        "🧠 Process selected PDFs",
+        key="process_notes_button",
+        disabled=not uploaded_files,
+        use_container_width=True,
+    ):
+        new_document_ids = []
+        errors = []
 
-            from rag_pipeline import (
-                create_embeddings,
-                ingest_pdf,
-            )
-
+        try:
             with st.spinner(
-                "🥋 Sensei is studying your notes..."
+                "🥋 Sensei is processing your study library..."
             ):
-
-                # Save uploaded PDF
-                with open(
-                    uploaded_file.name,
-                    "wb",
-                ) as file:
-
-                    file.write(
-                        uploaded_file.getbuffer()
-                    )
-
-
-                # Create embedding model
                 embeddings = create_embeddings()
 
+                for uploaded_file in uploaded_files:
+                    try:
+                        file_bytes = uploaded_file.getvalue()
+                        content_hash = hashlib.sha256(
+                            file_bytes
+                        ).hexdigest()
+                        document_id = content_hash
 
-                # Ingest PDF
-                vector_store = ingest_pdf(
-                    uploaded_file.name,
-                    embeddings,
+                        # If the file is already in the manifest,
+                        # reuse it without embedding it again.
+                        if document_id in library:
+                            existing = library[document_id]
+                            existing_path = Path(
+                                existing.get("path", "")
+                            )
+
+                            if existing_path.exists():
+                                new_document_ids.append(document_id)
+                                continue
+
+                        safe_name = Path(
+                            uploaded_file.name
+                        ).name
+
+                        pdf_path = upload_dir / (
+                            f"{content_hash[:12]}_{safe_name}"
+                        )
+
+                        pdf_path.write_bytes(file_bytes)
+
+                        ingest_pdf(
+                            str(pdf_path),
+                            embeddings,
+                            subject=(
+                                subject_name.strip()
+                                or "Uncategorized"
+                            ),
+                        )
+
+                        library[document_id] = {
+                            "document_id": document_id,
+                            "display_name": uploaded_file.name,
+                            "path": str(pdf_path),
+                            "subject": (
+                                subject_name.strip()
+                                or "Uncategorized"
+                            ),
+                        }
+
+                        new_document_ids.append(document_id)
+
+                    except Exception as error:
+                        errors.append(
+                            f"{uploaded_file.name}: {error}"
+                        )
+
+                manifest_path.write_text(
+                    json.dumps(library, indent=2),
+                    encoding="utf-8",
                 )
 
+                st.session_state.sensei_library = library
 
-                # Store active document
-                document_name = uploaded_file.name
+                if new_document_ids:
+                    st.session_state[
+                        "document_scope_selector"
+                    ] = list(dict.fromkeys(new_document_ids))
 
-                st.session_state.vector_store = vector_store
-
-                st.session_state.source_pdf = document_name
-
-                st.session_state.active_document_name = (
-                    document_name
+                st.session_state.vector_store = (
+                    load_existing_vector_store(embeddings)
                 )
 
-                st.session_state.notes_processed = True
+            if new_document_ids:
+                st.success(
+                    f"Library ready: {len(library)} PDF(s) available."
+                )
 
-            st.success(
-                "✅ Notes processed successfully!"
+            for error in errors:
+                st.error(f"Could not process {error}")
+
+        except Exception as error:
+            st.error(
+                f"Could not initialize the document library: {error}"
             )
 
+    # --------------------------------------------------------
+    # LIBRARY VIEW AND DOCUMENT SELECTION
+    # --------------------------------------------------------
 
-    # ========================================================
-    # ACTIVE DOCUMENT STATUS
-    # ========================================================
+    library = st.session_state.sensei_library
 
-    if (
-        st.session_state.get(
-            "notes_processed",
-            False,
+    st.divider()
+    st.markdown("### 📚 Your study library")
+    st.caption(
+        "Your library manifest and uploaded PDF files persist "
+        "between Streamlit reruns."
+    )
+
+    if not library:
+        st.info("Upload and process your first PDF to get started.")
+
+    else:
+        st.metric("PDFs in library", len(library))
+
+        for document in library.values():
+            st.markdown(
+                f"- **{document.get('display_name', 'Unnamed PDF')}** "
+                f"— {document.get('subject', 'Uncategorized')}"
+            )
+
+        document_ids = list(library.keys())
+
+        saved_selection = st.session_state.get(
+            "document_scope_selector",
+            [document_ids[-1]],
         )
-        and st.session_state.get(
-            "active_document_name"
+
+        saved_selection = [
+            doc_id
+            for doc_id in saved_selection
+            if doc_id in library
+        ]
+
+        if not saved_selection:
+            saved_selection = [document_ids[-1]]
+
+        st.session_state["document_scope_selector"] = (
+            saved_selection
         )
-    ):
 
-        st.markdown("---")
-
-        st.success(
-            f"📚 Active notes: "
-            f"**{st.session_state.active_document_name}**"
+        selected_document_ids = st.multiselect(
+            "Search within these documents",
+            options=document_ids,
+            format_func=lambda doc_id: (
+                f"{library[doc_id].get('display_name', 'Unnamed PDF')} "
+                f"· {library[doc_id].get('subject', 'Uncategorized')}"
+            ),
+            key="document_scope_selector",
         )
+        # Save selected PDFs so Adaptive Quiz can access them
+        st.session_state["selected_document_ids"] = list(selected_document_ids)
 
+        # ----------------------------------------------------
+        # ASK SENSEI — SOURCE-FIRST RETRIEVAL
+        # ----------------------------------------------------
 
-    # ========================================================
-    # ASK SENSEI
-    # ========================================================
-
-    if "vector_store" in st.session_state:
-
-        st.markdown("---")
-
+        st.divider()
         st.markdown("### 🎯 Ask Sensei")
 
         question = st.text_input(
-            "Ask a question from your notes:",
-            placeholder="e.g. What is a multistage graph?",
+            "Ask a question from your selected notes:",
+            placeholder=(
+                "e.g. What topics are covered in my AAI syllabus?"
+            ),
             key="sensei_question",
         )
 
+        # External research is disabled by default.
+        # Enable it deliberately for questions needing outside context.
+        use_web_research = st.checkbox(
+            "Allow external web research if my notes are insufficient",
+            value=False,
+            key="allow_external_research",
+            help=(
+                "When unchecked, answers must use selected notes. "
+                "Syllabus questions always remain notes-only."
+            ),
+        )
 
         if st.button(
             "🥋 Ask Sensei",
             key="ask_sensei_button",
+            use_container_width=True,
         ):
-
             if not question.strip():
+                st.warning("Please enter a question first.")
 
+            elif not selected_document_ids:
                 st.warning(
-                    "Please enter a question first."
+                    "Select at least one PDF from your library."
                 )
 
             else:
+                try:
+                    with st.spinner(
+                        "🥋 Searching your selected notes..."
+                    ):
+                        embeddings = create_embeddings()
 
-                from rag_pipeline import (
-                    retrieve_documents,
-                    generate_answer,
-                )
+                        vector_store = st.session_state.get(
+                            "vector_store"
+                        )
 
-                with st.spinner(
-                    "🥋 Sensei is thinking..."
-                ):
+                        if vector_store is None:
+                            vector_store = load_existing_vector_store(
+                                embeddings
+                            )
+                            st.session_state.vector_store = (
+                                vector_store
+                            )
 
-                    # ------------------------------------------------
-                    # Vector store
-                    # ------------------------------------------------
+                        documents = retrieve_documents(
+                            vector_store,
+                            question,
+                            k=6,
+                            document_ids=selected_document_ids,
+                        )
 
-                    vector_store = (
-                        st.session_state.vector_store
+                        question_lower = question.casefold()
+
+                        # Treat syllabus requests as exact-source
+                        # extraction, not general exam research.
+                        # Detect syllabus questions using the shared helper
+                        syllabus_question = is_syllabus_query(question)
+
+                        selected_names = [
+                            library[doc_id].get("display_name", "Unnamed PDF")
+                            for doc_id in selected_document_ids
+                        ]
+
+                        # External research is allowed only when:
+                        # 1. The user enabled it.
+                        # 2. The question is not about a syllabus.
+                        # 3. No relevant content was retrieved from the selected PDFs.
+                        allow_web = (
+                            use_web_research
+                            and not syllabus_question
+                        )
+
+                        if documents:
+                            answer = generate_answer(
+                                question,
+                                documents,
+                                use_web=allow_web,
+                            )
+
+                        elif allow_web:
+                            # No notes were retrieved, and the user allowed web research.
+                            answer = generate_answer(
+                                question,
+                                [],
+                                use_web=True,
+                            )
+
+                        else:
+                            answer = (
+                                "I couldn't find relevant content in "
+                                "the selected PDFs. No external research "
+                                "was performed.\n\n"
+                                "Try selecting the correct syllabus PDF, "
+                                "checking the retrieved notes, or "
+                                "reprocessing that document."
+                            )
+                        log_interaction(
+                            question=question,
+                            answer=answer,
+                            source_pdf=", ".join(selected_names),
+                        )
+
+                        st.session_state.last_answer = answer
+                        st.session_state.last_question = question
+                        st.session_state.last_documents = documents
+                        st.session_state.last_scope_names = selected_names
+
+                except Exception as error:
+                    st.error(
+                        f"Could not answer the question: {error}"
                     )
 
+        # ----------------------------------------------------
+        # ANSWER AND RETRIEVED EVIDENCE
+        # ----------------------------------------------------
 
-                    # ------------------------------------------------
-                    # Active document
-                    # ------------------------------------------------
+        if st.session_state.get("last_answer"):
+            st.markdown("### 🥋 Sensei's Answer")
+            st.markdown(st.session_state.last_answer)
 
-                    active_document = (
-                        st.session_state.get(
-                            "active_document_name"
+            with st.expander(
+                "📖 View retrieved notes",
+                expanded=False,
+            ):
+                documents = st.session_state.get(
+                    "last_documents", []
+                )
+
+                if not documents:
+                    st.info(
+                        "No note chunks were retrieved for the last "
+                        "question. The answer above should not be "
+                        "treated as a summary of your PDFs."
+                    )
+
+                else:
+                    st.success(
+                        f"Retrieved {len(documents)} chunk(s) "
+                        "from the selected library scope."
+                    )
+
+                    for index, document in enumerate(
+                        documents,
+                        start=1,
+                    ):
+                        metadata = document.metadata
+                        doc_id = metadata.get("document_id")
+
+                        friendly_name = (
+                            library.get(doc_id, {}).get("display_name")
+                            or metadata.get("source_pdf", "Unknown PDF")
+                        )
+
+                        page = metadata.get("page_number")
+                        chunk_index = metadata.get("chunk_index")
+
+                        st.markdown(f"#### Chunk {index}")
+                        st.caption(
+                            f"📄 {friendly_name}"
+                            + (
+                                f" · Page {page}"
+                                if page is not None
+                                else ""
+                            )
+                        )
+
+                        if chunk_index is not None:
+                            st.caption(f"Chunk index: {chunk_index}")
+
+                        st.write(document.page_content)
+                        st.divider()
+
+## QUIZ GENERATOR !!
+
+
+elif mode == "🧠 Adaptive Quiz":
+    import json
+    import random
+    from rag_pipeline import (
+        create_embeddings,
+        load_existing_vector_store,
+        retrieve_documents,
+    )
+    from question_engine import (
+        QuestionEngineError,
+        extract_concepts,
+        generate_questions_for_concept,
+        grade_question,
+        calculate_quiz_score,
+        next_difficulty,
+    )
+
+    st.title("🧠 SENSEI Adaptive Quiz")
+    st.caption("Test your understanding using evidence from your study PDFs.")
+
+    # ---------------------------------------------------------
+    # Session state
+    # ---------------------------------------------------------
+    defaults = {
+        "sensei_quiz_questions": [],
+        "sensei_quiz_results": [],
+        "sensei_quiz_submitted": False,
+        "sensei_quiz_scores": [],
+        "sensei_quiz_difficulty": 3,
+        "sensei_quiz_source_names": [],
+    }
+
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+    # ---------------------------------------------------------
+    # Quiz settings
+    # ---------------------------------------------------------
+    st.subheader("Configure your quiz")
+
+    quiz_count = st.selectbox(
+        "Number of questions",
+        [3, 5, 10],
+        index=0,
+        key="sensei_quiz_count",
+    )
+
+    difficulty = st.slider(
+        "Target difficulty",
+        min_value=1,
+        max_value=5,
+        value=st.session_state.sensei_quiz_difficulty,
+        help="1 = easier questions, 5 = more challenging questions.",
+        key="sensei_quiz_difficulty_slider",
+    )
+
+    st.caption(
+        f"Current target difficulty: {difficulty}/5"
+    )
+
+    # ---------------------------------------------------------
+    # Generate a PDF-grounded quiz
+    # ---------------------------------------------------------
+    if st.button(
+        "🎯 Generate PDF-Based Quiz",
+        type="primary",
+        key="sensei_generate_quiz",
+    ):
+        if not st.session_state.get("selected_document_ids"):
+            st.warning(
+                "Select at least one PDF in the Notes Q&A section first."
+            )
+        else:
+            try:
+                with st.spinner(
+                    "Reading your selected PDFs and verifying question evidence..."
+                ):
+                    embeddings = create_embeddings()
+                    vector_store = load_existing_vector_store(embeddings)
+
+                    if vector_store is None:
+                        raise QuestionEngineError(
+                            "The existing vector store could not be loaded. "
+                            "Please ingest your PDFs in Notes Q&A first."
+                        )
+
+                    selected_ids = st.session_state.get("selected_document_ids", [])
+                    st.write("PDFs available to quiz:", selected_ids)
+
+                    retrieved_docs = retrieve_documents(
+                        vector_store,
+                        (
+                            "Important definitions, principles, explanations, "
+                            "algorithms, examples, and concepts in the selected "
+                            "study documents"
+                        ),
+                        k=12,
+                        document_ids=selected_ids,
+                    )
+
+                    if not retrieved_docs:
+                        raise QuestionEngineError(
+                            "No relevant chunks were retrieved for the selected PDFs."
+                        )
+
+                    concepts = extract_concepts(
+                        retrieved_docs,
+                        max_concepts=8,
+                    )
+
+                    candidates = []
+                    seen = set()
+
+                    for concept in concepts:
+                        # Restrict a concept to its identified source pages.
+                        concept_pages = set(concept.get("pages", []))
+
+                        if concept_pages:
+                            concept_docs = [
+                                doc
+                                for doc in retrieved_docs
+                                if str(
+                                    (getattr(doc, "metadata", {}) or {}).get(
+                                        "page_number",
+                                        (getattr(doc, "metadata", {}) or {}).get(
+                                            "page", "unknown"
+                                        ),
+                                    )
+                                ) in concept_pages
+                            ]
+                        else:
+                            concept_docs = retrieved_docs
+
+                        # Do not silently use unrelated pages if page matching fails.
+                        if not concept_docs:
+                            continue
+
+                        generated = generate_questions_for_concept(
+                            documents=concept_docs,
+                            concept_name=concept["name"],
+                            questions_per_concept=min(3, quiz_count),
+                        )
+
+                        for question in generated:
+                            if question["question"].casefold() in seen:
+                                continue
+
+                            seen.add(question["question"].casefold())
+                            candidates.append(question)
+
+                    # Prefer the requested difficulty, then the nearest available.
+                    candidates.sort(
+                        key=lambda q: abs(
+                            int(q.get("difficulty", 1)) - difficulty
                         )
                     )
 
+                    candidates = candidates[:quiz_count]
+                    random.shuffle(candidates)
 
-                    # ------------------------------------------------
-                    # Retrieve relevant notes
-                    #
-                    # IMPORTANT:
-                    # Your current retrieve_documents()
-                    # does NOT accept document_name.
-                    # ------------------------------------------------
+                    if not candidates:
+                        raise QuestionEngineError(
+                            "No questions passed evidence verification. "
+                            "Try another PDF or a different selection."
+                        )
 
-                    documents = retrieve_documents(
-                        vector_store,
-                        question,
-                        k=6,
+                    st.session_state.sensei_quiz_questions = candidates
+                    st.session_state.sensei_quiz_results = []
+                    st.session_state.sensei_quiz_submitted = False
+                    st.session_state.sensei_quiz_source_names = sorted({
+                        q.get("source_pdf", "Unknown PDF")
+                        for q in candidates
+                    })
+
+                st.success(
+                    f"Generated {len(candidates)} evidence-verified questions."
+                )
+                st.rerun()
+
+            except Exception as exc:
+                st.error(f"Could not generate the quiz: {exc}")
+
+    # ---------------------------------------------------------
+    # Display quiz and collect answers
+    # ---------------------------------------------------------
+    questions = st.session_state.sensei_quiz_questions
+
+    if questions:
+        st.divider()
+        st.subheader("Your quiz")
+
+        st.write(
+            f"**Questions:** {len(questions)}  |  "
+            f"**Target difficulty:** {difficulty}/5"
+        )
+
+        with st.expander("PDFs used for this quiz"):
+            for name in st.session_state.sensei_quiz_source_names:
+                st.write(f"📄 {name}")
+
+        if not st.session_state.sensei_quiz_submitted:
+            with st.form("sensei_adaptive_quiz_form"):
+                submitted_answers = {}
+
+                for index, question in enumerate(questions):
+                    st.markdown(
+                        f"**Q{index + 1}. {question['question']}**"
                     )
 
+                    question_type = question["question_type"]
+                    answer_key = json.loads(question["answer_key"])
 
-                    # ------------------------------------------------
-                    # Save retrieved documents
-                    # ------------------------------------------------
+                    if question_type == "multiple_choice":
+                        options = answer_key.get("options", {})
 
-                    st.session_state.retrieved_documents = (
-                        documents
-                    )
+                        selected_label = st.radio(
+                            "Choose one answer",
+                            options=list(options.keys()),
+                            format_func=lambda label, opts=options: (
+                                f"{label}. {opts[label]}"
+                            ),
+                            key=f"sensei_quiz_answer_{index}",
+                        )
 
+                        submitted_answers[index] = selected_label
 
-                    # ------------------------------------------------
-                    # Generate grounded answer
-                    # ------------------------------------------------
-
-                    if documents:
-
-                        answer = generate_answer(
-                            question,
-                            documents,
+                    elif question_type == "true_false":
+                        submitted_answers[index] = st.radio(
+                            "Choose your answer",
+                            ["true", "false"],
+                            format_func=lambda value: value.title(),
+                            key=f"sensei_quiz_answer_{index}",
                         )
 
                     else:
-
-                        answer = (
-                            "I couldn't find relevant information "
-                            "in the uploaded notes."
+                        submitted_answers[index] = st.text_input(
+                            "Your answer",
+                            key=f"sensei_quiz_answer_{index}",
+                            placeholder="Type your answer...",
                         )
 
+                    st.caption(
+                        f"Difficulty {question.get('difficulty', 1)}/5"
+                    )
+                    st.divider()
 
-                    # ------------------------------------------------
-                    # Save interaction
-                    # ------------------------------------------------
+                submit_quiz = st.form_submit_button(
+                    "✅ Submit Quiz",
+                    type="primary",
+                )
 
-                    log_interaction(
-                        question=question,
-                        answer=answer,
-                        source_pdf=active_document
-                        or "unknown",
+            if submit_quiz:
+                results = []
+
+                for index, question in enumerate(questions):
+                    student_answer = submitted_answers.get(index, "")
+
+                    # Empty responses are recorded as unanswered, not correct.
+                    if not str(student_answer).strip():
+                        results.append({
+                            "is_correct": False,
+                            "unanswered": True,
+                            "question": question["question"],
+                            "correct_answer": "",
+                            "explanation": "",
+                        })
+                        continue
+
+                    graded = grade_question(
+                        question["question_type"],
+                        question["answer_key"],
+                        student_answer,
                     )
 
+                    graded["question"] = question["question"]
+                    graded["student_answer"] = student_answer
+                    graded["unanswered"] = False
+                    results.append(graded)
 
-                # ====================================================
-                # ANSWER
-                # ====================================================
+                st.session_state.sensei_quiz_results = results
+                st.session_state.sensei_quiz_submitted = True
 
-                st.markdown(
-                    "### 🥋 Sensei's Answer"
+                score = calculate_quiz_score([
+                    result for result in results
+                    if not result.get("unanswered")
+                ])
+
+                st.session_state.sensei_quiz_scores.append(
+                    score["percentage"]
+                )
+                st.session_state.sensei_quiz_scores = (
+                    st.session_state.sensei_quiz_scores[-5:]
                 )
 
-                st.markdown(
-                    f"""
-                    <div class="sensei-card">
-                        {answer}
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                st.rerun()
 
+        # -----------------------------------------------------
+        # Results and evidence review
+        # -----------------------------------------------------
+        if st.session_state.sensei_quiz_submitted:
+            results = st.session_state.sensei_quiz_results
+            answered = [
+                result for result in results
+                if not result.get("unanswered")
+            ]
+            score = calculate_quiz_score(answered)
 
-                # ====================================================
-                # RETRIEVED NOTES
-                # ====================================================
+            st.divider()
+            st.subheader("📊 Your results")
+
+            col1, col2, col3 = st.columns(3)
+
+            col1.metric("Score", f"{score['percentage']:.1f}%")
+            col2.metric("Correct", score["correct"])
+            col3.metric(
+                "Unanswered",
+                sum(r.get("unanswered", False) for r in results),
+            )
+
+            for index, result in enumerate(results):
+                if result.get("unanswered"):
+                    heading = "⏭️ Unanswered"
+                elif result.get("is_correct"):
+                    heading = "✅ Correct"
+                else:
+                    heading = "❌ Incorrect"
 
                 with st.expander(
-                    "📖 View retrieved notes",
-                    expanded=False,
+                    f"{heading} — Question {index + 1}",
+                    expanded=not result.get("is_correct", False),
                 ):
+                    st.write(result.get("question", ""))
 
-                    if not documents:
-
-                        st.error(
-                            "No relevant content was retrieved "
-                            "from the active PDF."
-                        )
-
+                    if result.get("unanswered"):
+                        st.info("You did not answer this question.")
                     else:
-
-                        st.success(
-                            f"Retrieved {len(documents)} "
-                            f"chunks."
+                        st.write(
+                            f"**Your answer:** "
+                            f"{result.get('student_answer', '')}"
                         )
 
-                        for index, document in enumerate(
-                            documents,
-                            start=1,
-                        ):
+                    st.write(
+                        f"**Expected answer:** "
+                        f"{result.get('correct_answer', '')}"
+                    )
 
-                            metadata = document.metadata
+                    if result.get("explanation"):
+                        st.write(
+                            f"**Explanation:** {result['explanation']}"
+                        )
 
-                            page = metadata.get(
-                                "page_number"
-                            )
+                    if result.get("evidence_quote"):
+                        st.markdown("**Verified PDF evidence**")
+                        st.info(result["evidence_quote"])
 
-                            chunk_index = metadata.get(
-                                "chunk_index"
-                            )
+                        st.caption(
+                            f"Source: {result.get('source_pdf', 'Unknown PDF')} "
+                            f"| Page {result.get('page_number', 'Unknown')}"
+                        )
 
-                            source = metadata.get(
-                                "source_pdf",
-                                active_document,
-                            )
+            # Adapt difficulty based on recent quiz performance.
+            if len(st.session_state.sensei_quiz_scores) >= 2:
+                recommended = next_difficulty(
+                    st.session_state.sensei_quiz_scores,
+                    current_difficulty=difficulty,
+                )
 
+                st.divider()
+                st.write(
+                    f"**Recommended next difficulty:** {recommended}/5"
+                )
 
-                            st.markdown(
-                                f"### Chunk {index}"
-                            )
+                if recommended > difficulty:
+                    st.success(
+                        "Great progress! You may be ready for harder questions."
+                    )
+                elif recommended < difficulty:
+                    st.info(
+                        "A little more practice at an easier level may help."
+                    )
+                else:
+                    st.info(
+                        "Keep practising at this level to build consistency."
+                    )
 
+                if st.button(
+                    "Use Recommended Difficulty",
+                    key="sensei_use_recommended_difficulty",
+                ):
+                    st.session_state.sensei_quiz_difficulty = recommended
+                    st.rerun()
 
-                            if source:
-
-                                if page is not None:
-
-                                    st.caption(
-                                        f"📄 {source} "
-                                        f"| Page {page}"
-                                    )
-
-                                else:
-
-                                    st.caption(
-                                        f"📄 {source}"
-                                    )
-
-
-                            if chunk_index is not None:
-
-                                st.caption(
-                                    f"Chunk index: {chunk_index}"
-                                )
-
-
-                            st.write(
-                                document.page_content
-                            )
-
-                            st.markdown("---")
-
+            if st.button(
+                "🔄 Generate Another Quiz",
+                key="sensei_another_quiz",
+            ):
+                st.session_state.sensei_quiz_questions = []
+                st.session_state.sensei_quiz_results = []
+                st.session_state.sensei_quiz_submitted = False
+                st.rerun()
 
 # ============================================================
 # MATH SOLVER
@@ -407,11 +1032,7 @@ if mode == "📝 Notes Q&A":
 elif mode == "🧮 Math Solver":
 
     st.markdown("## 🧮 Math Solver")
-    st.caption("Powered by Sensei's verified mathematical engine")
-
-    # =========================================================
-    # MATH DOMAIN TABS
-    # =========================================================
+    st.caption("Powered by Sensei's mathematical engine.")
 
     tab_numerical, tab_linear, tab_statistics = st.tabs(
         [
@@ -421,9 +1042,9 @@ elif mode == "🧮 Math Solver":
         ]
     )
 
-    # =========================================================
+    # --------------------------------------------------------
     # TAB 1 — NUMERICAL MATH & CALCULUS
-    # =========================================================
+    # --------------------------------------------------------
 
     with tab_numerical:
 
@@ -445,10 +1066,6 @@ elif mode == "🧮 Math Solver":
             key="numerical_operation",
         )
 
-        # -----------------------------------------------------
-        # SOLVE SYSTEM
-        # -----------------------------------------------------
-
         if operation == "Solve System of Equations":
 
             equations_text = st.text_area(
@@ -462,34 +1079,25 @@ elif mode == "🧮 Math Solver":
                 from math_solver import solve_system
 
                 equations = [
-                    equation.strip()
-                    for equation in equations_text.splitlines()
-                    if equation.strip()
+                    line.strip()
+                    for line in equations_text.splitlines()
+                    if line.strip()
                 ]
 
-                result = solve_system(equations)
+                try:
+                    result = solve_system(equations)
 
-                if result["success"]:
+                    if result["success"]:
+                        st.success("Solution found")
 
-                    st.success("Solution found")
+                        for solution in result["result"]:
+                            for variable, value in solution.items():
+                                st.markdown(f"**{variable} = {value}**")
+                    else:
+                        st.error(result["error"])
 
-                    solutions = result["result"]
-
-                    for solution in solutions:
-
-                        for variable, value in solution.items():
-
-                            st.markdown(
-                                f"**{variable} = {value}**"
-                            )
-
-                else:
-
-                    st.error(result["error"])
-
-        # -----------------------------------------------------
-        # BASIC SYMBOLIC OPERATIONS
-        # -----------------------------------------------------
+                except Exception as error:
+                    st.error(f"Could not solve the system: {error}")
 
         elif operation in [
             "Evaluate Expression",
@@ -527,27 +1135,18 @@ elif mode == "🧮 Math Solver":
                     "Solve Equation": solve_equation,
                 }
 
-                result = functions[operation](expression)
+                try:
+                    result = functions[operation](expression)
 
-                if result["success"]:
+                    if result["success"]:
+                        st.success(f"Result: {result['result']}")
+                    else:
+                        st.error(result["error"])
 
-                    st.success(f"Result: {result['result']}")
+                except Exception as error:
+                    st.error(f"Calculation failed: {error}")
 
-                else:
-
-                    st.error(result["error"])
-
-        # -----------------------------------------------------
-        # CALCULUS
-        # -----------------------------------------------------
-
-        elif operation in [
-            "Differentiate",
-            "Integrate",
-            "Definite Integral",
-            "Limit",
-            "Series Expansion",
-        ]:
+        else:
 
             expression = st.text_input(
                 "Enter expression",
@@ -561,7 +1160,6 @@ elif mode == "🧮 Math Solver":
                 key="calculus_variable",
             )
 
-            # Definite integral inputs
             if operation == "Definite Integral":
 
                 lower = st.text_input(
@@ -576,7 +1174,6 @@ elif mode == "🧮 Math Solver":
                     key="integral_upper",
                 )
 
-            # Limit inputs
             if operation == "Limit":
 
                 point = st.text_input(
@@ -591,7 +1188,6 @@ elif mode == "🧮 Math Solver":
                     key="limit_direction",
                 )
 
-            # Series inputs
             if operation == "Series Expansion":
 
                 point = st.text_input(
@@ -618,62 +1214,65 @@ elif mode == "🧮 Math Solver":
                     series_expansion,
                 )
 
-                if operation == "Differentiate":
+                try:
+                    if operation == "Differentiate":
+                        result = differentiate(expression, variable)
 
-                    result = differentiate(
-                        expression,
-                        variable,
-                    )
+                    elif operation == "Integrate":
+                        result = integrate(expression, variable)
 
-                elif operation == "Integrate":
+                    elif operation == "Definite Integral":
+                        result = definite_integral(
+                            expression,
+                            variable,
+                            lower,
+                            upper,
+                        )
 
-                    result = integrate(
-                        expression,
-                        variable,
-                    )
+                    elif operation == "Limit":
+                        result = calculate_limit(
+                            expression,
+                            variable,
+                            point,
+                            direction,
+                        )
 
-                elif operation == "Definite Integral":
+                    else:
+                        result = series_expansion(
+                            expression,
+                            variable,
+                            point,
+                            int(order),
+                        )
 
-                    result = definite_integral(
-                        expression,
-                        variable,
-                        lower,
-                        upper,
-                    )
+                    if result["success"]:
+                        st.success(f"Result: {result['result']}")
+                    else:
+                        st.error(result["error"])
 
-                elif operation == "Limit":
+                except Exception as error:
+                    st.error(f"Calculation failed: {error}")
 
-                    result = calculate_limit(
-                        expression,
-                        variable,
-                        point,
-                        direction,
-                    )
-
-                else:
-
-                    result = series_expansion(
-                        expression,
-                        variable,
-                        point,
-                        int(order),
-                    )
-
-                if result["success"]:
-
-                    st.success(
-                        f"Result: {result['result']}"
-                    )
-
-                else:
-
-                    st.error(result["error"])
-
-    # =========================================================
+    # --------------------------------------------------------
     # TAB 2 — LINEAR ALGEBRA
-    # =========================================================
+    # --------------------------------------------------------
 
     with tab_linear:
+
+        from math_solver import (
+            vector_add,
+            vector_subtract,
+            dot_product,
+            vector_norm,
+            matrix_add,
+            matrix_multiply,
+            matrix_transpose,
+            matrix_determinant,
+            matrix_inverse,
+            matrix_rank,
+            matrix_eigenvalues,
+            matrix_eigenvectors,
+        )
 
         operation = st.selectbox(
             "Choose operation",
@@ -694,27 +1293,6 @@ elif mode == "🧮 Math Solver":
             key="linear_operation",
         )
 
-        import ast
-
-        from math_solver import (
-            vector_add,
-            vector_subtract,
-            dot_product,
-            vector_norm,
-            matrix_add,
-            matrix_multiply,
-            matrix_transpose,
-            matrix_determinant,
-            matrix_inverse,
-            matrix_rank,
-            matrix_eigenvalues,
-            matrix_eigenvectors,
-        )
-
-        # -----------------------------------------------------
-        # VECTOR OPERATIONS
-        # -----------------------------------------------------
-
         if operation in [
             "Vector Addition",
             "Vector Subtraction",
@@ -733,86 +1311,48 @@ elif mode == "🧮 Math Solver":
                 key="vector_b",
             )
 
-            if st.button(
-                "Calculate",
-                key="vector_operation_button",
-            ):
+            if st.button("Calculate", key="vector_operation_button"):
 
                 try:
-
                     a = ast.literal_eval(vector_a)
                     b = ast.literal_eval(vector_b)
 
                     if operation == "Vector Addition":
-
                         result = vector_add(a, b)
-
                     elif operation == "Vector Subtraction":
-
                         result = vector_subtract(a, b)
-
                     else:
-
                         result = dot_product(a, b)
 
                     if result["success"]:
-
-                        st.success(
-                            f"Result: {result['result']}"
-                        )
-
+                        st.success(f"Result: {result['result']}")
                     else:
-
                         st.error(result["error"])
 
                 except Exception as error:
-
-                    st.error(
-                        f"Invalid vector input: {error}"
-                    )
-
-        # -----------------------------------------------------
-        # VECTOR NORM
-        # -----------------------------------------------------
+                    st.error(f"Invalid vector input: {error}")
 
         elif operation == "Vector Norm":
 
-            vector = st.text_input(
+            vector_text = st.text_input(
                 "Vector",
                 placeholder="[3, 4]",
                 key="vector_norm_input",
             )
 
-            if st.button(
-                "Calculate",
-                key="vector_norm_button",
-            ):
+            if st.button("Calculate", key="vector_norm_button"):
 
                 try:
-
-                    vector = ast.literal_eval(vector)
-
+                    vector = ast.literal_eval(vector_text)
                     result = vector_norm(vector)
 
                     if result["success"]:
-
-                        st.success(
-                            f"Result: {result['result']}"
-                        )
-
+                        st.success(f"Result: {result['result']}")
                     else:
-
                         st.error(result["error"])
 
                 except Exception as error:
-
-                    st.error(
-                        f"Invalid vector input: {error}"
-                    )
-
-        # -----------------------------------------------------
-        # MATRIX OPERATIONS
-        # -----------------------------------------------------
+                    st.error(f"Invalid vector input: {error}")
 
         else:
 
@@ -822,111 +1362,63 @@ elif mode == "🧮 Math Solver":
                 key="matrix_a",
             )
 
-            if operation in [
-                "Matrix Addition",
-                "Matrix Multiplication",
-            ]:
-
+            if operation in ["Matrix Addition", "Matrix Multiplication"]:
                 matrix_b = st.text_area(
                     "Matrix B",
                     placeholder="[[5, 6], [7, 8]]",
                     key="matrix_b",
                 )
 
-            if st.button(
-                "Calculate",
-                key="matrix_operation_button",
-            ):
+            if st.button("Calculate", key="matrix_operation_button"):
 
                 try:
-
                     a = ast.literal_eval(matrix_a)
 
                     if operation == "Matrix Addition":
-
-                        b = ast.literal_eval(matrix_b)
-
-                        result = matrix_add(
-                            a,
-                            b,
-                        )
+                        result = matrix_add(a, ast.literal_eval(matrix_b))
 
                     elif operation == "Matrix Multiplication":
-
-                        b = ast.literal_eval(matrix_b)
-
-                        result = matrix_multiply(
-                            a,
-                            b,
-                        )
+                        result = matrix_multiply(a, ast.literal_eval(matrix_b))
 
                     elif operation == "Matrix Transpose":
-
                         result = matrix_transpose(a)
 
                     elif operation == "Matrix Determinant":
-
                         result = matrix_determinant(a)
 
                     elif operation == "Matrix Inverse":
-
                         result = matrix_inverse(a)
 
                     elif operation == "Matrix Rank":
-
                         result = matrix_rank(a)
 
                     elif operation == "Matrix Eigenvalues":
-
                         result = matrix_eigenvalues(a)
 
                     else:
-
                         result = matrix_eigenvectors(a)
 
                     if result["success"]:
-
                         st.success("Result")
-
                         value = result["result"]
 
                         if operation == "Matrix Eigenvectors":
-
-                            st.write(
-                                "Eigenvalues:",
-                                value["eigenvalues"],
-                            )
-
-                            st.write(
-                                "Eigenvectors:",
-                                value["eigenvectors"],
-                            )
-
+                            st.write("Eigenvalues:", value["eigenvalues"])
+                            st.write("Eigenvectors:", value["eigenvectors"])
                         else:
-
                             st.write(value)
 
                     else:
-
                         st.error(result["error"])
 
                 except Exception as error:
+                    st.error(f"Invalid matrix input: {error}")
 
-                    st.error(
-                        f"Invalid matrix input: {error}"
-                    )
-
-    # =========================================================
+    # --------------------------------------------------------
     # TAB 3 — PROBABILITY & STATISTICS
-    # =========================================================
-
-    # =========================================================
-    # TAB 3 — PROBABILITY & STATISTICS — L5
-    # =========================================================
+    # --------------------------------------------------------
 
     with tab_statistics:
-
-        import numpy as np
 
         from math_solver import (
             calculate_mean,
@@ -944,7 +1436,7 @@ elif mode == "🧮 Math Solver":
         st.markdown("### 📊 Probability & Statistics")
         st.caption(
             "Descriptive statistics, probability, distributions, "
-            "sampling, statistical tests and visualization"
+            "sampling, statistical tests and visualization."
         )
 
         stats_section = st.selectbox(
@@ -960,10 +1452,6 @@ elif mode == "🧮 Math Solver":
             ],
             key="stats_section",
         )
-
-        # =====================================================
-        # DESCRIPTIVE STATISTICS
-        # =====================================================
 
         if stats_section == "Descriptive Statistics":
 
@@ -988,7 +1476,6 @@ elif mode == "🧮 Math Solver":
             )
 
             if operation == "Percentile":
-
                 percentile = st.number_input(
                     "Percentile",
                     min_value=0.0,
@@ -998,75 +1485,42 @@ elif mode == "🧮 Math Solver":
                 )
 
             if operation == "Covariance":
-
                 data_b_text = st.text_input(
                     "Enter second dataset",
                     placeholder="[12, 18, 25, 29, 35]",
                     key="covariance_data",
                 )
 
-            if st.button(
-                "Calculate",
-                key="descriptive_button",
-            ):
+            if st.button("Calculate", key="descriptive_button"):
 
                 try:
+                    data = ast.literal_eval(data_text)
 
-                    data = eval(
-                        data_text,
-                        {"__builtins__": {}},
-                        {},
-                    )
+                    functions = {
+                        "Mean": calculate_mean,
+                        "Median": calculate_median,
+                        "Mode": calculate_mode,
+                        "Variance": calculate_variance,
+                        "Standard Deviation": calculate_standard_deviation,
+                    }
 
-                    if operation == "Mean":
-                        result = calculate_mean(data)
+                    if operation == "Percentile":
+                        result = calculate_percentile(data, percentile)
 
-                    elif operation == "Median":
-                        result = calculate_median(data)
-
-                    elif operation == "Mode":
-                        result = calculate_mode(data)
-
-                    elif operation == "Variance":
-                        result = calculate_variance(data)
-
-                    elif operation == "Standard Deviation":
-                        result = calculate_standard_deviation(data)
-
-                    elif operation == "Percentile":
-                        result = calculate_percentile(
-                            data,
-                            percentile,
-                        )
+                    elif operation == "Covariance":
+                        data_b = ast.literal_eval(data_b_text)
+                        result = calculate_covariance(data, data_b)
 
                     else:
-
-                        data_b = eval(
-                            data_b_text,
-                            {"__builtins__": {}},
-                            {},
-                        )
-
-                        result = calculate_covariance(
-                            data,
-                            data_b,
-                        )
+                        result = functions[operation](data)
 
                     if result["success"]:
-                        st.success(
-                            f"Result: {result['result']}"
-                        )
+                        st.success(f"Result: {result['result']}")
                     else:
                         st.error(result["error"])
 
                 except Exception as error:
-                    st.error(
-                        f"Invalid input: {error}"
-                    )
-
-        # =====================================================
-        # PROBABILITY
-        # =====================================================
+                    st.error(f"Invalid input: {error}")
 
         elif stats_section == "Probability":
 
@@ -1094,20 +1548,11 @@ elif mode == "🧮 Math Solver":
                     key="total",
                 )
 
-                if st.button(
-                    "Calculate",
-                    key="basic_probability_button",
-                ):
-
-                    result = calculate_probability(
-                        favorable,
-                        total,
-                    )
+                if st.button("Calculate", key="basic_probability_button"):
+                    result = calculate_probability(favorable, total)
 
                     if result["success"]:
-                        st.success(
-                            f"Probability: {result['result']}"
-                        )
+                        st.success(f"Probability: {result['result']}")
                     else:
                         st.error(result["error"])
 
@@ -1128,20 +1573,11 @@ elif mode == "🧮 Math Solver":
                     key="p_b",
                 )
 
-                if st.button(
-                    "Calculate",
-                    key="conditional_probability_button",
-                ):
-
-                    result = calculate_conditional_probability(
-                        p_a_and_b,
-                        p_b,
-                    )
+                if st.button("Calculate", key="conditional_probability_button"):
+                    result = calculate_conditional_probability(p_a_and_b, p_b)
 
                     if result["success"]:
-                        st.success(
-                            f"P(A|B): {result['result']}"
-                        )
+                        st.success(f"P(A|B): {result['result']}")
                     else:
                         st.error(result["error"])
 
@@ -1169,11 +1605,7 @@ elif mode == "🧮 Math Solver":
                     key="bayes_p_b",
                 )
 
-                if st.button(
-                    "Calculate",
-                    key="bayes_button",
-                ):
-
+                if st.button("Calculate", key="bayes_button"):
                     result = calculate_bayes_probability(
                         p_b_given_a,
                         p_a,
@@ -1181,19 +1613,13 @@ elif mode == "🧮 Math Solver":
                     )
 
                     if result["success"]:
-                        st.success(
-                            f"P(A|B): {result['result']}"
-                        )
+                        st.success(f"P(A|B): {result['result']}")
                     else:
                         st.error(result["error"])
 
-        # =====================================================
-        # DISTRIBUTIONS
-        # =====================================================
-
         elif stats_section == "Distributions":
 
-            distribution = st.selectbox(
+            st.selectbox(
                 "Choose distribution",
                 [
                     "Uniform",
@@ -1210,17 +1636,12 @@ elif mode == "🧮 Math Solver":
             )
 
             st.info(
-                "Distribution controls will be connected to "
-                "the verified L5 distribution engine."
+                "Distribution calculations are not connected in this UI yet."
             )
-
-        # =====================================================
-        # SAMPLING & CLT
-        # =====================================================
 
         elif stats_section == "Sampling & CLT":
 
-            sampling_operation = st.selectbox(
+            st.selectbox(
                 "Choose operation",
                 [
                     "Random Sampling",
@@ -1234,13 +1655,8 @@ elif mode == "🧮 Math Solver":
             )
 
             st.info(
-                "Sampling and CLT operations are available "
-                "in Sensei's L5 statistics engine."
+                "Sampling and CLT calculations are not connected in this UI yet."
             )
-
-        # =====================================================
-        # LLN
-        # =====================================================
 
         elif stats_section == "Law of Large Numbers":
 
@@ -1255,16 +1671,13 @@ elif mode == "🧮 Math Solver":
             )
 
             st.info(
-                f"LLN simulation ready for {sample_size} observations."
+                f"LLN simulation is not connected yet. "
+                f"Selected observations: {sample_size}."
             )
-
-        # =====================================================
-        # STATISTICAL TESTS
-        # =====================================================
 
         elif stats_section == "Statistical Tests":
 
-            test = st.selectbox(
+            st.selectbox(
                 "Choose statistical test",
                 [
                     "One-Sample t-Test",
@@ -1276,18 +1689,11 @@ elif mode == "🧮 Math Solver":
                 key="statistical_test",
             )
 
-            st.info(
-                "Statistical test operations are available "
-                "in Sensei's verified L5 engine."
-            )
-
-        # =====================================================
-        # VISUALIZATION
-        # =====================================================
+            st.info("Statistical tests are not connected in this UI yet.")
 
         else:
 
-            visualization = st.selectbox(
+            st.selectbox(
                 "Choose visualization",
                 [
                     "Histogram",
@@ -1298,55 +1704,448 @@ elif mode == "🧮 Math Solver":
                 key="visualization_type",
             )
 
-            data_text = st.text_input(
+            st.text_input(
                 "Enter data",
                 placeholder="[10, 12, 15, 18, 20, 21, 25]",
                 key="visualization_data",
             )
 
-            st.info(
-                "Visualization operations are available "
-                "through Sensei's NumPy, Matplotlib and "
-                "Seaborn statistics engine."
-            )
+            st.info("Statistical plotting is not connected in this UI yet.")
+
+
 # ============================================================
 # STUDY HISTORY
 # ============================================================
-
 elif mode == "📚 Study History":
 
     st.markdown("## 📚 Study History")
-
-    st.info(
-        "Review your previous questions and answers."
-    )
+    st.info("Review your 10 most recent questions and answers.")
 
     display_quote()
 
-    history = get_all_history()
+    try:
+        history = get_all_history(limit=10)
 
-    if not history:
+        if not history:
+            st.info("No study history yet. Ask Sensei a question!")
 
-        st.info(
-            "No study history yet. Ask Sensei a question!"
+        else:
+            st.markdown(f"### 📚 Recent History ({len(history)})")
+
+            for item in history:
+                timestamp = item.get("timestamp", "")
+                question = item.get("question", "Untitled question")
+                answer = item.get("answer", "")
+
+                with st.expander(f"❓ {question}"):
+                    st.caption(str(timestamp))
+                    st.markdown("**Answer:**")
+                    st.write(answer)
+
+    except Exception as error:
+        st.error("Could not load study history.")
+        st.exception(error)
+
+# ============================================================
+# POMODORO FOCUS
+# ============================================================
+
+elif mode == "🍅 Pomodoro Focus":
+
+    st.markdown("## 🍅 Pomodoro Focus")
+    st.caption("One task. One timer. One step closer to mastery.")
+
+    st.markdown(
+        "Focus deeply, take restorative breaks, and let SENSEI "
+        "keep track of your completed sessions."
+    )
+
+    # --------------------------------------------------------
+    # TIMER STATE
+    # --------------------------------------------------------
+
+    timer_defaults = {
+        "pomodoro_type": "focus",
+        "pomodoro_running": False,
+        "pomodoro_end_time": None,
+        "pomodoro_remaining": 25 * 60,
+        "pomodoro_session_minutes": 25,
+        "pomodoro_focus_streak": 0,
+        "pomodoro_saved_end": None,
+    }
+
+    for key, value in timer_defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+    session_options = {
+        "focus": ("🎯 Focus", 25),
+        "short_break": ("☕ Short Break", 5),
+        "long_break": ("🌿 Long Break", 15),
+    }
+
+    current_type = st.session_state.pomodoro_type
+
+    # Refresh the page once per second while the timer runs.
+    if st.session_state.pomodoro_running:
+        st_autorefresh(
+            interval=1000,
+            key="pomodoro_second_refresh",
         )
 
-    else:
+    # --------------------------------------------------------
+    # TIMER COMPLETION
+    # --------------------------------------------------------
 
-        st.markdown(
-            f"### 📚 {len(history)} Questions"
+    if st.session_state.pomodoro_running:
+        remaining = max(
+            0,
+            int(
+                st.session_state.pomodoro_end_time - time.time()
+                + 0.999
+            ),
         )
 
-        for timestamp, question, answer in history:
+        st.session_state.pomodoro_remaining = remaining
 
-            with st.expander(
-                f"❓ {question}"
-            ):
+        if remaining == 0:
+            completed_type = st.session_state.pomodoro_type
+            completed_minutes = st.session_state.pomodoro_session_minutes
 
-                st.caption(timestamp)
+            # Prevent the same timer completion being saved twice.
+            completed_key = st.session_state.pomodoro_end_time
 
-                st.markdown(
-                    "**Answer:**"
+            if st.session_state.pomodoro_saved_end != completed_key:
+                save_pomodoro_session(
+                    planned_minutes=completed_minutes,
+                    completed_minutes=completed_minutes,
+                    session_type=completed_type,
                 )
 
-                st.write(answer)
+                st.session_state.pomodoro_saved_end = completed_key
+
+                if completed_type == "focus":
+                    st.session_state.pomodoro_focus_streak += 1
+                    st.session_state.pomodoro_type = (
+                        "long_break"
+                        if st.session_state.pomodoro_focus_streak % 4 == 0
+                        else "short_break"
+                    )
+
+            st.session_state.pomodoro_running = False
+            st.session_state.pomodoro_end_time = None
+
+            next_type = st.session_state.pomodoro_type
+            next_minutes = session_options[next_type][1]
+            st.session_state.pomodoro_remaining = next_minutes * 60
+            st.session_state.pomodoro_session_minutes = next_minutes
+
+            st.success("🎉 Session completed! Beautiful work.")
+            st.rerun()
+
+    # --------------------------------------------------------
+    # SESSION SELECTOR
+    # --------------------------------------------------------
+
+    if not st.session_state.pomodoro_running:
+        chosen_type = st.radio(
+            "Choose your session",
+            options=list(session_options.keys()),
+            format_func=lambda item: session_options[item][0],
+            horizontal=True,
+            index=list(session_options.keys()).index(
+                st.session_state.pomodoro_type
+            ),
+            key="pomodoro_session_selector",
+        )
+
+        if chosen_type != st.session_state.pomodoro_type:
+            st.session_state.pomodoro_type = chosen_type
+            st.session_state.pomodoro_session_minutes = (
+                session_options[chosen_type][1]
+            )
+            st.session_state.pomodoro_remaining = (
+                session_options[chosen_type][1] * 60
+            )
+
+    current_type = st.session_state.pomodoro_type
+
+    # --------------------------------------------------------
+    # TIMER DISPLAY
+    # --------------------------------------------------------
+
+    remaining = st.session_state.pomodoro_remaining
+    minutes, seconds = divmod(remaining, 60)
+
+    st.divider()
+    st.markdown(
+        f"<div style='text-align:center; padding:24px 8px;'>"
+        f"<div style='font-size:18px; opacity:0.8;'>"
+        f"{session_options[current_type][0]}</div>"
+        f"<div style='font-size:clamp(54px, 10vw, 88px); "
+        f"font-weight:750; letter-spacing:3px;'>"
+        f"{minutes:02d}:{seconds:02d}</div>"
+        f"<div style='opacity:0.7;'>"
+        f"{'Stay present. You have got this.' if current_type == 'focus' else 'Rest is part of the process.'}"
+        f"</div></div>",
+        unsafe_allow_html=True,
+    )
+
+    # --------------------------------------------------------
+    # TIMER CONTROLS
+    # --------------------------------------------------------
+
+    col_start, col_pause, col_reset = st.columns(3)
+
+    with col_start:
+        if st.button(
+            "▶ Start / Resume",
+            use_container_width=True,
+            disabled=st.session_state.pomodoro_running,
+            key="pomodoro_start",
+        ):
+            st.session_state.pomodoro_end_time = (
+                time.time() + st.session_state.pomodoro_remaining
+            )
+            st.session_state.pomodoro_running = True
+            st.rerun()
+
+    with col_pause:
+        if st.button(
+            "⏸ Pause",
+            use_container_width=True,
+            disabled=not st.session_state.pomodoro_running,
+            key="pomodoro_pause",
+        ):
+            st.session_state.pomodoro_remaining = max(
+                0,
+                int(
+                    st.session_state.pomodoro_end_time
+                    - time.time()
+                    + 0.999
+                ),
+            )
+            st.session_state.pomodoro_running = False
+            st.session_state.pomodoro_end_time = None
+            st.rerun()
+
+    with col_reset:
+        if st.button(
+            "↻ Reset",
+            use_container_width=True,
+            key="pomodoro_reset",
+        ):
+            st.session_state.pomodoro_running = False
+            st.session_state.pomodoro_end_time = None
+            st.session_state.pomodoro_remaining = (
+                st.session_state.pomodoro_session_minutes * 60
+            )
+            st.rerun()
+
+    st.caption(
+        "Completed sessions are saved to your local database. "
+        "Paused or reset sessions are not counted as completed."
+    )
+
+    # --------------------------------------------------------
+    # PERSISTENT STATISTICS
+    # --------------------------------------------------------
+
+    stats = get_pomodoro_stats()
+
+    st.divider()
+    st.markdown("### 🏆 Your focus journey")
+
+    stat1, stat2, stat3 = st.columns(3)
+
+    stat1.metric(
+        "Focus sessions",
+        stats["completed_focus_sessions"],
+    )
+    stat2.metric(
+        "Focus minutes",
+        stats["focus_minutes"],
+    )
+    stat3.metric(
+        "Completed breaks",
+        stats["completed_breaks"],
+    )
+
+    st.markdown("### 📜 Recent sessions")
+
+    recent_sessions = get_recent_pomodoro_sessions(limit=10)
+
+    if recent_sessions:
+        for session in recent_sessions:
+            st.markdown(
+                f"- **{session['session_type'].replace('_', ' ').title()}** "
+                f"— {session['completed_minutes']} min "
+                f"· {session['completed_at']}"
+            )
+    else:
+        st.info("Your first completed session will appear here.")
+
+
+# ============================================================
+# TO-DO LIST
+# ============================================================
+
+elif mode == "✨ To-do List":
+
+    st.markdown("## ✨ Your Dojo To-do List")
+    st.caption("Small wins. Consistent effort. Real progress.")
+
+    # --------------------------------------------------------
+    # ADD TASK
+    # --------------------------------------------------------
+
+    with st.form("sensei_add_todo_form", clear_on_submit=True):
+        task_title = st.text_input(
+            "What do you want to accomplish?",
+            placeholder="e.g. Revise Dijkstra's algorithm",
+        )
+
+        col_category, col_priority = st.columns(2)
+
+        with col_category:
+            task_category = st.selectbox(
+                "Category",
+                [
+                    "College",
+                    "AI / ML",
+                    "DSA",
+                    "Projects",
+                    "Personal",
+                    "General",
+                ],
+            )
+
+        with col_priority:
+            task_priority = st.selectbox(
+                "Priority",
+                ["High", "Medium", "Low"],
+                index=1,
+            )
+
+        add_task = st.form_submit_button(
+            "＋ Add task",
+            type="primary",
+            use_container_width=True,
+        )
+
+    if add_task:
+        if not task_title.strip():
+            st.warning("Give your task a title first.")
+        else:
+            add_todo_task(
+                title=task_title,
+                category=task_category,
+                priority=task_priority,
+            )
+            st.success("Task added to your list!")
+            st.rerun()
+
+    # --------------------------------------------------------
+    # TASK FILTER
+    # --------------------------------------------------------
+
+    st.divider()
+
+    task_view = st.radio(
+        "Show tasks",
+        ["All", "Pending", "Completed"],
+        horizontal=True,
+        key="sensei_todo_filter",
+    )
+
+    tasks = get_todo_tasks(include_completed=True)
+
+    if task_view == "Pending":
+        tasks = [
+            task for task in tasks
+            if not task["is_completed"]
+        ]
+    elif task_view == "Completed":
+        tasks = [
+            task for task in tasks
+            if task["is_completed"]
+        ]
+
+    all_tasks = get_todo_tasks(include_completed=True)
+    total_tasks = len(all_tasks)
+    completed_tasks = sum(
+        bool(task["is_completed"]) for task in all_tasks
+    )
+    pending_tasks = total_tasks - completed_tasks
+
+    metric1, metric2, metric3 = st.columns(3)
+
+    metric1.metric("Total", total_tasks)
+    metric2.metric("Pending", pending_tasks)
+    metric3.metric("Completed", completed_tasks)
+
+    if total_tasks:
+        st.progress(completed_tasks / total_tasks)
+        st.caption(
+            f"{completed_tasks} of {total_tasks} tasks completed."
+        )
+
+    # --------------------------------------------------------
+    # DISPLAY TASKS
+    # --------------------------------------------------------
+
+    st.markdown("### 📋 Your tasks")
+
+    if not tasks:
+        st.info(
+            "Nothing here yet. Add a task above and start collecting wins! 🌱"
+        )
+
+    for task in tasks:
+        task_id = task["id"]
+        is_completed = bool(task["is_completed"])
+
+        with st.container(border=True):
+            col_check, col_details, col_delete = st.columns(
+                [0.7, 4, 0.8]
+            )
+
+            with col_check:
+                if st.checkbox(
+                    "Done",
+                    value=is_completed,
+                    key=f"todo_done_{task_id}",
+                    label_visibility="collapsed",
+                ) != is_completed:
+                    set_todo_completed(
+                        task_id,
+                        not is_completed,
+                    )
+                    st.rerun()
+
+            with col_details:
+                title = task["title"]
+
+                if is_completed:
+                    st.markdown(f"~~{title}~~")
+                else:
+                    st.markdown(f"**{title}**")
+
+                st.caption(
+                    f"{task['category']} · "
+                    f"{task['priority']} priority"
+                )
+
+                if task.get("completed_at"):
+                    st.caption(
+                        f"Completed: {task['completed_at']}"
+                    )
+
+            with col_delete:
+                if st.button(
+                    "🗑️",
+                    key=f"todo_delete_{task_id}",
+                    help="Delete this task",
+                ):
+                    delete_todo_task(task_id)
+                    st.rerun()
